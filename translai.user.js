@@ -2,7 +2,7 @@
 // @name         TranslAI
 // @namespace    https://github.com/Dautsuro/Userscripts
 // @copyright    MIT
-// @version      1.9.1
+// @version      1.9.2
 // @description  Translates Chinese web novel chapters on 69shuba into English using Gemini, with glossary support for name consistency; support for more sites may be added.
 // @icon         https://www.google.com/s2/favicons?domain=69shuba.com
 // @icon64       https://www.google.com/s2/favicons?domain=69shuba.com&sz=64
@@ -209,11 +209,11 @@ addBtn.on('click', async () => {
 
     if (globalEntry) {
         alert('This name is already in the global glossary.');
-        return;
+    } else {
+        globalGlossary.push(entry);
+        await GM_setValue('globalGlossary', globalGlossary);
     }
 
-    globalGlossary.push(entry);
-    await GM_setValue('globalGlossary', globalGlossary);
     let chapter = chapterElem.html();
 
     chapter = chapter.replace(new RegExp(`<span[ a-z="-:;]+>${selectedText}</span>`, 'g'), match => {
