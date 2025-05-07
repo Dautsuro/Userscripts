@@ -2,7 +2,7 @@
 // @name         TranslAI
 // @namespace    https://github.com/Dautsuro/Userscripts
 // @copyright    MIT
-// @version      1.5.0
+// @version      1.6.0
 // @description  Translates Chinese web novel chapters on 69shuba into English using Gemini, with glossary support for name consistency; support for more sites may be added.
 // @icon         https://www.google.com/s2/favicons?domain=69shuba.com
 // @icon64       https://www.google.com/s2/favicons?domain=69shuba.com&sz=64
@@ -72,11 +72,11 @@ do {
 for (const entry of glossary[novelId]) {
     if (globalGlossary.find(globalEntry => globalEntry.chineseName === entry.chineseName)) {
         translatedChapter = translatedChapter.replace(new RegExp(entry.englishName, 'g'), match => {
-            return `<span style="background-color: #d4edda;">${match}</span>`;
+            return `<span style="background-color: #d4edda; user-select: all;">${match}</span>`;
         });
     } else {
         translatedChapter = translatedChapter.replace(new RegExp(entry.englishName, 'g'), match => {
-            return `<span style="background-color: #f8d7da;">${match}</span>`;
+            return `<span style="background-color: #f8d7da; user-select: all;">${match}</span>`;
         });
     }
 }
@@ -203,10 +203,6 @@ addBtn.on('click', async () => {
     chapter = chapter.replace(new RegExp(`<span[ a-z="-:;]+>${selectedText}</span>`, 'g'), match => {
         return match.replace(new RegExp('background-color: .+?;'), 'background-color: #d4edda;');
     });
-
-    // chapter = chapter.replace(new RegExp(`<span[^>]*>${entry.englishName}</span>`, 'g'), match => {
-    //     return match.replace(/background-color:[^;]+;/, 'background-color: #d4edda;');
-    // });
 
     chapterElem.html(chapter);
 });
