@@ -2,7 +2,7 @@
 // @name         TranslAI
 // @namespace    https://github.com/Dautsuro/Userscripts
 // @copyright    MIT
-// @version      1.2.0
+// @version      1.3.0
 // @description  Translates Chinese web novel chapters on 69shuba into English using Gemini, with glossary support for name consistency; support for more sites may be added.
 // @icon         https://www.google.com/s2/favicons?domain=69shuba.com
 // @icon64       https://www.google.com/s2/favicons?domain=69shuba.com&sz=64
@@ -25,6 +25,7 @@ if (!apiKey) {
     await GM_setValue('apiKey', apiKey);
 }
 
+const globalGlossary = await GM_getValue('globalGlossary', []);
 const glossary = await GM_getValue('glossary', {});
 const url = window.location.href;
 const novelId = url.split('/')[4];
@@ -51,7 +52,12 @@ let chapter = chapterElem.text()
 
 chapter = [title, ...chapter].join('\n\n');
 const rawChapter = chapter;
+globalGlossary.sort((a, b) => b.chineseName.length - a.chineseName.length);
 glossary[novelId].sort((a, b) => b.chineseName.length - a.chineseName.length);
+
+for (const entry of globalGlossary) {
+    chapter = chapter.replace(new RegExp(entry.chineseName, 'g'), entry.englishName);
+}
 
 for (const entry of glossary[novelId]) {
     chapter = chapter.replace(new RegExp(entry.chineseName, 'g'), entry.englishName);
@@ -62,6 +68,18 @@ let translatedChapter;
 do {
     translatedChapter = await askGemini('You are a professional Chinese-to-English translator. Translate this Chinese novel chapter into English. Use established English renderings for names, terms, places, and techniques (from official sources, fan wikis, or widely accepted fan translations). Output only the translated chapter.', chapter);
 } while (!translatedChapter);
+
+for (const entry of glossary[novelId]) {
+    if (globalGlossary.find(globalEntry => globalEntry.chineseName === entry.chineseName)) {
+        translatedChapter = translatedChapter.replace(new RegExp(entry.englishName, 'g'), match => {
+            return `<span style="background-color: #d4edda;">${match}</span>`;
+        });
+    } else {
+        translatedChapter = translatedChapter.replace(new RegExp(entry.englishName, 'g'), match => {
+            return `<span style="background-color: #f8d7da;">${match}</span>`;
+        });
+    }
+}
 
 chapterElem.html(translatedChapter.replace(new RegExp('\n', 'g'), '<br>'));
 let newGlossary;
@@ -88,9 +106,28 @@ const glossaryBtn = $('<button>', {
     text: '📝'
 });
 
+const addBtn = $('<button>', {
+    text: '➕'
+});
+
 glossaryBtn.css({
     position: 'fixed',
     top: '20px',
+    right: '20px',
+    padding: '8px',
+    'font-size': '16px',
+    'background-color': '#5f6368',
+    color: 'white',
+    border: 'none',
+    'border-radius': '5px',
+    cursor: 'pointer',
+    'z-index': '9999',
+    'box-shadow': '0 2px 5px rgba(0, 0, 0, 0.2)'
+});
+
+addBtn.css({
+    position: 'fixed',
+    top: '60px',
     right: '20px',
     padding: '8px',
     'font-size': '16px',
@@ -124,7 +161,28 @@ glossaryBtn.on('click', async () => {
     }
 });
 
+addBtn.on('click', async () => {
+    const selectedText = window.getSelection().toString().trim();
+    const entry = glossary[novelId].find(entry => entry.englishName.toLowerCase() === selectedText.toLowerCase());
+
+    if (!entry) {
+        alert('No entry found for this name.');
+        return;
+    }
+
+    globalGlossary.push(entry);
+    await GM_setValue('globalGlossary', globalGlossary);
+    let chapter = chapterElem.html();
+
+    chapter = chapter.replace(new RegExp(`<span[^>]*>${entry.englishName}</span>`, 'g'), (match) => {
+        return match.replace(/background-color:[^;]+;/, 'background-color: #d4edda;');
+    });
+
+    chapterElem.html(chapter);
+});
+
 $('body').append(glossaryBtn);
+$('body').append(addBtn);
 
 async function askGemini(instruction, content) {
     const systemInstruction = {
