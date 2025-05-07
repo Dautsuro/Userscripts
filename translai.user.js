@@ -2,7 +2,7 @@
 // @name         TranslAI
 // @namespace    https://github.com/Dautsuro/Userscripts
 // @copyright    MIT
-// @version      1.6.1
+// @version      1.6.2
 // @description  Translates Chinese web novel chapters on 69shuba into English using Gemini, with glossary support for name consistency; support for more sites may be added.
 // @icon         https://www.google.com/s2/favicons?domain=69shuba.com
 // @icon64       https://www.google.com/s2/favicons?domain=69shuba.com&sz=64
@@ -68,6 +68,8 @@ let translatedChapter;
 do {
     translatedChapter = await askGemini('You are a professional Chinese-to-English translator. Translate this Chinese novel chapter into English. Use established English renderings for names, terms, places, and techniques (from official sources, fan wikis, or widely accepted fan translations). Output only the translated chapter.', chapter);
 } while (!translatedChapter);
+
+glossary[novelId].sort((a, b) => a.englishName.length - b.englishName.length);
 
 for (const entry of glossary[novelId]) {
     if (globalGlossary.find(globalEntry => globalEntry.chineseName === entry.chineseName)) {
