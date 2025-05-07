@@ -2,7 +2,7 @@
 // @name         TranslAI
 // @namespace    https://github.com/Dautsuro/Userscripts
 // @copyright    MIT
-// @version      1.9.2
+// @version      1.9.3
 // @description  Translates Chinese web novel chapters on 69shuba into English using Gemini, with glossary support for name consistency; support for more sites may be added.
 // @icon         https://www.google.com/s2/favicons?domain=69shuba.com
 // @icon64       https://www.google.com/s2/favicons?domain=69shuba.com&sz=64
@@ -102,19 +102,21 @@ for (const newEntry of newGlossary) {
 }
 
 await GM_setValue('glossary', glossary);
-usedEntries.sort((a, b) => a.englishName.length - b.englishName.length);
+const nameMap = {};
 
 for (const entry of usedEntries) {
-    if (globalGlossary.find(globalEntry => globalEntry.chineseName === entry.chineseName)) {
-        translatedChapter = translatedChapter.replace(new RegExp(entry.englishName, 'g'), match => {
-            return `<span style="background-color: #d4edda; user-select: all;">${match}</span>`;
-        });
-    } else {
-        translatedChapter = translatedChapter.replace(new RegExp(entry.englishName, 'g'), match => {
-            return `<span style="background-color: #f8d7da; user-select: all;">${match}</span>`;
-        });
-    }
+    nameMap[entry.englishName] = globalGlossary.some(globalEntry => globalEntry.chineseName === entry.chineseName);
 }
+
+const sortedNames = Object.keys(nameMap).sort((a, b) => b.length - a.length);
+const escapedNames = sortedNames.map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+const combinedRegex = new RegExp(`\\b(${escapedNames.join('|')})\\b`, 'g');
+
+translatedChapter = translatedChapter.replace(combinedRegex, match => {
+    const isGlobal = nameMap[match];
+    const bgColor = isGlobal ? '#d4edda' : '#f8d7da';
+    return `<span style="background-color: ${bgColor}; user-select: all;">${match}</span>`;
+});
 
 chapterElem.html(translatedChapter.replace(new RegExp('\n', 'g'), '<br>'));
 
