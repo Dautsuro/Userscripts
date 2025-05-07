@@ -2,7 +2,7 @@
 // @name         TranslAI
 // @namespace    https://github.com/Dautsuro/Userscripts
 // @copyright    MIT
-// @version      1.4.0
+// @version      1.5.0
 // @description  Translates Chinese web novel chapters on 69shuba into English using Gemini, with glossary support for name consistency; support for more sites may be added.
 // @icon         https://www.google.com/s2/favicons?domain=69shuba.com
 // @icon64       https://www.google.com/s2/favicons?domain=69shuba.com&sz=64
@@ -25,7 +25,7 @@ if (!apiKey) {
     await GM_setValue('apiKey', apiKey);
 }
 
-const globalGlossary = await GM_getValue('globalGlossary', []);
+let globalGlossary = await GM_getValue('globalGlossary', []);
 const glossary = await GM_getValue('glossary', {});
 const url = window.location.href;
 const novelId = url.split('/')[4];
@@ -110,13 +110,17 @@ const addBtn = $('<button>', {
     text: '➕'
 });
 
+const removeBtn = $('<button>', {
+    text: '➖'
+});
+
 glossaryBtn.css({
     position: 'fixed',
     top: '20px',
     right: '20px',
     padding: '8px',
-    'font-size': '16px',
-    'background-color': '#E8E4D8',
+    'font-size': '14px',
+    'background-color': '#E0E8F0',
     color: 'white',
     border: 'none',
     'border-radius': '5px',
@@ -130,8 +134,23 @@ addBtn.css({
     top: '60px',
     right: '20px',
     padding: '8px',
-    'font-size': '16px',
-    'background-color': '#E8E4D8',
+    'font-size': '14px',
+    'background-color': '#E0E8F0',
+    color: 'white',
+    border: 'none',
+    'border-radius': '5px',
+    cursor: 'pointer',
+    'z-index': '9999',
+    'box-shadow': '0 2px 5px rgba(0, 0, 0, 0.2)'
+});
+
+removeBtn.css({
+    position: 'fixed',
+    top: '100px',
+    right: '20px',
+    padding: '8px',
+    'font-size': '14px',
+    'background-color': '#E0E8F0',
     color: 'white',
     border: 'none',
     'border-radius': '5px',
@@ -170,19 +189,51 @@ addBtn.on('click', async () => {
         return;
     }
 
+    const globalEntry = globalGlossary.find(globalEntry => globalEntry.chineseName.toLowerCase() === entry.chineseName.toLowerCase());
+
+    if (globalEntry) {
+        alert('This name is already in the global glossary.');
+        return;
+    }
+
     globalGlossary.push(entry);
     await GM_setValue('globalGlossary', globalGlossary);
     let chapter = chapterElem.html();
 
-    chapter = chapter.replace(new RegExp(`<span[^>]*>${entry.englishName}</span>`, 'g'), (match) => {
-        return match.replace(/background-color:[^;]+;/, 'background-color: #d4edda;');
+    chapter = chapter.replace(new RegExp(`<span[ a-z="-:;]+>${selectedText}</span>`, 'g'), match => {
+        return match.replace(new RegExp('background-color: .+?;'), 'background-color: #d4edda;');
     });
 
+    // chapter = chapter.replace(new RegExp(`<span[^>]*>${entry.englishName}</span>`, 'g'), match => {
+    //     return match.replace(/background-color:[^;]+;/, 'background-color: #d4edda;');
+    // });
+
+    chapterElem.html(chapter);
+});
+
+removeBtn.on('click', async () => {
+    const selectedText = window.getSelection().toString().trim();
+    const rmEntry = glossary[novelId].find(entry => entry.englishName.toLowerCase() === selectedText.toLowerCase());
+    const rmGlobalEntry = globalGlossary.find(globalEntry => globalEntry.englishName.toLowerCase() === selectedText.toLowerCase());
+
+    if (rmEntry) {
+        glossary[novelId] = glossary[novelId].filter(entry => entry.chineseName !== rmEntry.chineseName);
+    }
+
+    if (rmGlobalEntry) {
+        globalGlossary = globalGlossary.filter(entry => entry.chineseName !== rmGlobalEntry.chineseName);
+    }
+
+    await GM_setValue('glossary', glossary);
+    await GM_setValue('globalGlossary', globalGlossary);
+    let chapter = chapterElem.html();
+    chapter = chapter.replace(new RegExp(`<span[ a-z="-:;]+>${selectedText}</span>`, 'g'), selectedText);
     chapterElem.html(chapter);
 });
 
 $('body').append(glossaryBtn);
 $('body').append(addBtn);
+$('body').append(removeBtn);
 
 async function askGemini(instruction, content) {
     const systemInstruction = {
