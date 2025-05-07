@@ -2,7 +2,7 @@
 // @name         TranslAI
 // @namespace    https://github.com/Dautsuro/Userscripts
 // @copyright    MIT
-// @version      1.8.1
+// @version      1.9.0
 // @description  Translates Chinese web novel chapters on 69shuba into English using Gemini, with glossary support for name consistency; support for more sites may be added.
 // @icon         https://www.google.com/s2/favicons?domain=69shuba.com
 // @icon64       https://www.google.com/s2/favicons?domain=69shuba.com&sz=64
@@ -98,6 +98,7 @@ newGlossary = JSON.parse(newGlossary);
 for (const newEntry of newGlossary) {
     if (!glossary[novelId].find(entry => entry.chineseName === newEntry.chineseName)) {
         glossary[novelId].push(newEntry);
+        usedEntries.push(newEntry);
     }
 }
 
