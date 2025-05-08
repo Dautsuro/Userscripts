@@ -2,7 +2,7 @@
 // @name         TranslAI
 // @namespace    https://github.com/Dautsuro/Userscripts
 // @copyright    MIT
-// @version      1.9.5
+// @version      1.9.6
 // @description  Translates Chinese web novel chapters on 69shuba into English using Gemini, with glossary support for name consistency; support for more sites may be added.
 // @icon         https://www.google.com/s2/favicons?domain=69shuba.com
 // @icon64       https://www.google.com/s2/favicons?domain=69shuba.com&sz=64
@@ -54,26 +54,13 @@ chapter = [title, ...chapter].join('\n\n');
 const rawChapter = chapter;
 globalGlossary.sort((a, b) => b.chineseName.length - a.chineseName.length);
 glossary[novelId].sort((a, b) => b.chineseName.length - a.chineseName.length);
-const usedEntries = [];
 
 for (const entry of globalGlossary) {
-    const replaced = chapter.replace(new RegExp(entry.chineseName, 'g'), entry.englishName);
-
-    if (replaced !== chapter) {
-        usedEntries.push(entry);
-    }
-
-    chapter = replaced;
+    chapter = chapter.replace(new RegExp(entry.chineseName, 'g'), entry.englishName);
 }
 
 for (const entry of glossary[novelId]) {
-    const replaced = chapter.replace(new RegExp(entry.chineseName, 'g'), entry.englishName);
-
-    if (replaced !== chapter) {
-        usedEntries.push(entry);
-    }
-
-    chapter = replaced;
+    chapter = chapter.replace(new RegExp(entry.chineseName, 'g'), entry.englishName);
 }
 
 let translatedChapter;
@@ -97,14 +84,13 @@ newGlossary = JSON.parse(newGlossary);
 for (const newEntry of newGlossary) {
     if (!glossary[novelId].find(entry => entry.chineseName.toLowerCase().trim() === newEntry.chineseName.toLowerCase().trim())) {
         glossary[novelId].push(newEntry);
-        usedEntries.push(newEntry);
     }
 }
 
 await GM_setValue('glossary', glossary);
 const nameMap = {};
 
-for (const entry of usedEntries) {
+for (const entry of [...globalGlossary, ...glossary[novelId]]) {
     nameMap[entry.englishName] = globalGlossary.some(globalEntry => globalEntry.chineseName === entry.chineseName);
 }
 
