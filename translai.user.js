@@ -2,7 +2,7 @@
 // @name         TranslAI
 // @namespace    https://github.com/Dautsuro/Userscripts
 // @copyright    MIT
-// @version      1.9.4
+// @version      1.9.5
 // @description  Translates Chinese web novel chapters on 69shuba into English using Gemini, with glossary support for name consistency; support for more sites may be added.
 // @icon         https://www.google.com/s2/favicons?domain=69shuba.com
 // @icon64       https://www.google.com/s2/favicons?domain=69shuba.com&sz=64
@@ -95,7 +95,7 @@ if (newGlossary.includes('```')) {
 newGlossary = JSON.parse(newGlossary);
 
 for (const newEntry of newGlossary) {
-    if (!glossary[novelId].find(entry => entry.chineseName === newEntry.chineseName)) {
+    if (!glossary[novelId].find(entry => entry.chineseName.toLowerCase().trim() === newEntry.chineseName.toLowerCase().trim())) {
         glossary[novelId].push(newEntry);
         usedEntries.push(newEntry);
     }
@@ -179,7 +179,7 @@ removeBtn.css({
 
 glossaryBtn.on('click', async () => {
     const selectedText = window.getSelection().toString().trim();
-    const entry = glossary[novelId].find(entry => entry.englishName.toLowerCase() === selectedText.toLowerCase());
+    const entry = glossary[novelId].find(entry => entry.englishName.toLowerCase().trim() === selectedText.toLowerCase().trim());
 
     if (!entry) {
         alert('No entry found for this name.');
@@ -200,14 +200,14 @@ glossaryBtn.on('click', async () => {
 
 addBtn.on('click', async () => {
     const selectedText = window.getSelection().toString().trim();
-    const entry = glossary[novelId].find(entry => entry.englishName.toLowerCase() === selectedText.toLowerCase());
+    const entry = glossary[novelId].find(entry => entry.englishName.toLowerCase().trim() === selectedText.toLowerCase().trim());
 
     if (!entry) {
         alert('No entry found for this name.');
         return;
     }
 
-    const globalEntry = globalGlossary.find(globalEntry => globalEntry.chineseName.toLowerCase() === entry.chineseName.toLowerCase());
+    const globalEntry = globalGlossary.find(globalEntry => globalEntry.chineseName.toLowerCase().trim() === entry.chineseName.toLowerCase().trim());
 
     if (globalEntry) {
         alert('This name is already in the global glossary.');
@@ -227,8 +227,8 @@ addBtn.on('click', async () => {
 
 removeBtn.on('click', async () => {
     const selectedText = window.getSelection().toString().trim();
-    const rmEntry = glossary[novelId].find(entry => entry.englishName.toLowerCase() === selectedText.toLowerCase());
-    const rmGlobalEntry = globalGlossary.find(globalEntry => globalEntry.englishName.toLowerCase() === selectedText.toLowerCase());
+    const rmEntry = glossary[novelId].find(entry => entry.englishName.toLowerCase().trim() === selectedText.toLowerCase().trim());
+    const rmGlobalEntry = globalGlossary.find(globalEntry => globalEntry.englishName.toLowerCase().trim() === selectedText.toLowerCase().trim());
 
     if (rmEntry) {
         glossary[novelId] = glossary[novelId].filter(entry => entry.chineseName !== rmEntry.chineseName);
