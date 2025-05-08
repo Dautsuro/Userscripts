@@ -2,7 +2,7 @@
 // @name         TranslAI
 // @namespace    https://github.com/Dautsuro/Userscripts
 // @copyright    MIT
-// @version      1.9.7
+// @version      1.9.8
 // @description  Translates Chinese web novel chapters on 69shuba into English using Gemini, with glossary support for name consistency; support for more sites may be added.
 // @icon         https://www.google.com/s2/favicons?domain=69shuba.com
 // @icon64       https://www.google.com/s2/favicons?domain=69shuba.com&sz=64
@@ -172,18 +172,27 @@ removeBtn.css({
 glossaryBtn.on('click', async () => {
     const selectedText = window.getSelection().toString().trim();
     const entry = glossary[novelId].find(entry => entry.englishName.toLowerCase().trim() === selectedText.toLowerCase().trim());
+    const globalEntry = globalGlossary.find(globalEntry => globalEntry.englishName.toLowerCase().trim() === selectedText.toLowerCase().trim());
 
-    if (!entry) {
+    if (!entry && !globalEntry) {
         alert('No entry found for this name.');
         return;
     }
 
-    const oldName = entry.englishName;
-    const newName = prompt(`Enter the new name. Previous name: ${entry.englishName}`);
+    const oldName = entry ? entry.englishName : globalEntry.englishName;
+    const newName = prompt(`Enter the new name. Previous name: ${oldName}`);
 
     if (newName.length > 0) {
-        entry.englishName = newName.trim();
-        await GM_setValue('glossary', glossary);
+        if (entry) {
+            entry.englishName = newName.trim();
+            await GM_setValue('glossary', glossary);
+        }
+
+        if (globalEntry) {
+            globalEntry.englishName = newName.trim();
+            await GM_setValue('globalGlossary', globalGlossary);
+        }
+        
         let chapter = chapterElem.html();
         chapter = chapter.replace(new RegExp(oldName, 'g'), newName);
         chapterElem.html(chapter);
