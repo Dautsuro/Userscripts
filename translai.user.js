@@ -2,7 +2,7 @@
 // @name         TranslAI
 // @namespace    https://github.com/Dautsuro/Userscripts
 // @copyright    MIT
-// @version      1.9.9
+// @version      1.9.10
 // @description  Translates Chinese web novel chapters on 69shuba into English using Gemini, with glossary support for name consistency; support for more sites may be added.
 // @icon         https://www.google.com/s2/favicons?domain=69shuba.com
 // @icon64       https://www.google.com/s2/favicons?domain=69shuba.com&sz=64
@@ -34,17 +34,18 @@ if (!glossary[novelId]) {
     glossary[novelId] = [];
 }
 
+$('#pageheadermenu header').remove();
 $('.txtinfo').remove();
 $('script').remove();
 
-const chapterElem = $('.txtnav');
-const titleElem = $('h1.hide720');
+const $chapter = $('.txtnav');
+const $title = $('h1.hide720');
 
-let title = titleElem.text().trim();
+let title = $title.text().trim();
 title = title.substring(title.indexOf('第'));
-titleElem.text(title);
+$title.text(title);
 
-let chapter = chapterElem.text()
+let chapter = $chapter.text()
     .replace(new RegExp(title, 'g'), '')
     .split('\n')
     .map(line => line.trim())
@@ -52,8 +53,8 @@ let chapter = chapterElem.text()
 
 chapter = [title, ...chapter].join('\n\n');
 const rawChapter = chapter;
-globalGlossary.sort((a, b) => a.chineseName.length - b.chineseName.length);
-glossary[novelId].sort((a, b) => a.chineseName.length - b.chineseName.length);
+globalGlossary.sort((a, b) => b.chineseName.length - a.chineseName.length);
+glossary[novelId].sort((a, b) => b.chineseName.length - a.chineseName.length);
 
 for (const entry of globalGlossary) {
     chapter = chapter.replace(new RegExp(entry.chineseName, 'g'), entry.englishName);
@@ -72,7 +73,7 @@ do {
 let newGlossary;
 
 do {
-    newGlossary = await askGemini('You are a professional glossary creator. Search for any names, terms, places, and techniques available in the Chinese chapter and its translation in the English chapter. Create a JSON array using this format: [{"chineseName":"string", "englishName":"string"}, {"chineseName":"string", "englishName":"string"}]. Each value should strictly correspond to the name, do not add any note. Output only the JSON array.', `Chinese chapter:\n${rawChapter}\n\nEnglish chapter:\n${translatedChapter}`);
+    newGlossary = await askGemini('You are a professional glossary creator. Search for any proper nouns (names, terms, places, and techniques) available in the Chinese chapter and its translation in the English chapter. Create a JSON array using this format: [{"chineseName":"string", "englishName":"string"}, {"chineseName":"string", "englishName":"string"}]. Each value should strictly correspond to the name, do not add any note. Output only the JSON array.', `Chinese chapter:\n${rawChapter}\n\nEnglish chapter:\n${translatedChapter}`);
 } while (!newGlossary);
 
 if (newGlossary.includes('```')) {
@@ -110,145 +111,124 @@ translatedChapter = translatedChapter.replace(combinedRegex, match => {
     return `<span style="background-color: ${bgColor}; user-select: all;">${match}</span>`;
 });
 
-chapterElem.html(translatedChapter.replace(new RegExp('\n', 'g'), '<br>'));
+$chapter.html(translatedChapter.replace(new RegExp('\n', 'g'), '<br>'));
 
-const glossaryBtn = $('<button>', {
-    text: '📝'
-});
+const modifyButton = {
+    text: '📝',
+    onClick: async () => {
+        const selectedText = window.getSelection().toString().trim();
+        const entry = glossary[novelId].find(entry => entry.englishName.toLowerCase().trim() === selectedText.toLowerCase().trim());
+        const globalEntry = globalGlossary.find(globalEntry => globalEntry.englishName.toLowerCase().trim() === selectedText.toLowerCase().trim());
 
-const addBtn = $('<button>', {
-    text: '➕'
-});
-
-const removeBtn = $('<button>', {
-    text: '➖'
-});
-
-glossaryBtn.css({
-    position: 'fixed',
-    top: '20px',
-    right: '10px',
-    padding: '8px',
-    'font-size': '14px',
-    'background-color': '#E0E8F0',
-    color: 'white',
-    border: 'none',
-    'border-radius': '5px',
-    cursor: 'pointer',
-    'z-index': '9999',
-    'box-shadow': '0 2px 5px rgba(0, 0, 0, 0.2)'
-});
-
-addBtn.css({
-    position: 'fixed',
-    top: '60px',
-    right: '10px',
-    padding: '8px',
-    'font-size': '14px',
-    'background-color': '#E0E8F0',
-    color: 'white',
-    border: 'none',
-    'border-radius': '5px',
-    cursor: 'pointer',
-    'z-index': '9999',
-    'box-shadow': '0 2px 5px rgba(0, 0, 0, 0.2)'
-});
-
-removeBtn.css({
-    position: 'fixed',
-    top: '100px',
-    right: '10px',
-    padding: '8px',
-    'font-size': '14px',
-    'background-color': '#E0E8F0',
-    color: 'white',
-    border: 'none',
-    'border-radius': '5px',
-    cursor: 'pointer',
-    'z-index': '9999',
-    'box-shadow': '0 2px 5px rgba(0, 0, 0, 0.2)'
-});
-
-glossaryBtn.on('click', async () => {
-    const selectedText = window.getSelection().toString().trim();
-    const entry = glossary[novelId].find(entry => entry.englishName.toLowerCase().trim() === selectedText.toLowerCase().trim());
-    const globalEntry = globalGlossary.find(globalEntry => globalEntry.englishName.toLowerCase().trim() === selectedText.toLowerCase().trim());
-
-    if (!entry && !globalEntry) {
-        alert('No entry found for this name.');
-        return;
-    }
-
-    const oldName = entry ? entry.englishName : globalEntry.englishName;
-    const newName = prompt(`Enter the new name. Previous name: ${oldName}`);
-
-    if (newName.length > 0) {
-        if (entry) {
-            entry.englishName = newName.trim();
-            await GM_setValue('glossary', glossary);
+        if (!entry && !globalEntry) {
+            alert('No entry found for this name.');
+            return;
         }
+
+        const oldName = entry ? entry.englishName : globalEntry.englishName;
+        const newName = prompt(`Enter the new name. Previous name: ${oldName}`);
+
+        if (newName.length > 0) {
+            if (entry) {
+                entry.englishName = newName.trim();
+                await GM_setValue('glossary', glossary);
+            }
+
+            if (globalEntry) {
+                globalEntry.englishName = newName.trim();
+                await GM_setValue('globalGlossary', globalGlossary);
+            }
+            
+            let chapter = $chapter.html();
+            chapter = chapter.replace(new RegExp(oldName, 'g'), newName);
+            $chapter.html(chapter);
+        }
+    }
+}
+
+const addButton = {
+    text: '➕',
+    onClick: async () => {
+        const selectedText = window.getSelection().toString().trim();
+        const entry = glossary[novelId].find(entry => entry.englishName.toLowerCase().trim() === selectedText.toLowerCase().trim());
+
+        if (!entry) {
+            alert('No entry found for this name.');
+            return;
+        }
+
+        const globalEntry = globalGlossary.find(globalEntry => globalEntry.chineseName.toLowerCase().trim() === entry.chineseName.toLowerCase().trim());
 
         if (globalEntry) {
-            globalEntry.englishName = newName.trim();
+            alert('This name is already in the global glossary.');
+        } else {
+            globalGlossary.push(entry);
             await GM_setValue('globalGlossary', globalGlossary);
         }
-        
-        let chapter = chapterElem.html();
-        chapter = chapter.replace(new RegExp(oldName, 'g'), newName);
-        chapterElem.html(chapter);
+
+        let chapter = $chapter.html();
+
+        chapter = chapter.replace(new RegExp(`<span[ a-z="-:;]+>${selectedText}</span>`, 'g'), match => {
+            return match.replace(new RegExp('background-color: .+?;'), 'background-color: #d4edda;');
+        });
+
+        $chapter.html(chapter);
     }
-});
+}
 
-addBtn.on('click', async () => {
-    const selectedText = window.getSelection().toString().trim();
-    const entry = glossary[novelId].find(entry => entry.englishName.toLowerCase().trim() === selectedText.toLowerCase().trim());
+const removeButton = {
+    text: '➖',
+    onClick: async () => {
+        const selectedText = window.getSelection().toString().trim();
+        const rmEntry = glossary[novelId].find(entry => entry.englishName.toLowerCase().trim() === selectedText.toLowerCase().trim());
+        const rmGlobalEntry = globalGlossary.find(globalEntry => globalEntry.englishName.toLowerCase().trim() === selectedText.toLowerCase().trim());
 
-    if (!entry) {
-        alert('No entry found for this name.');
-        return;
-    }
+        if (rmEntry) {
+            glossary[novelId] = glossary[novelId].filter(entry => entry.chineseName !== rmEntry.chineseName);
+        }
 
-    const globalEntry = globalGlossary.find(globalEntry => globalEntry.chineseName.toLowerCase().trim() === entry.chineseName.toLowerCase().trim());
+        if (rmGlobalEntry) {
+            globalGlossary = globalGlossary.filter(entry => entry.chineseName !== rmGlobalEntry.chineseName);
+        }
 
-    if (globalEntry) {
-        alert('This name is already in the global glossary.');
-    } else {
-        globalGlossary.push(entry);
+        await GM_setValue('glossary', glossary);
         await GM_setValue('globalGlossary', globalGlossary);
+        let chapter = $chapter.html();
+        chapter = chapter.replace(new RegExp(`<span[ a-z="-:;]+>${selectedText}</span>`, 'g'), selectedText);
+        $chapter.html(chapter);
     }
+}
 
-    let chapter = chapterElem.html();
+addButtons([modifyButton, addButton, removeButton]);
 
-    chapter = chapter.replace(new RegExp(`<span[ a-z="-:;]+>${selectedText}</span>`, 'g'), match => {
-        return match.replace(new RegExp('background-color: .+?;'), 'background-color: #d4edda;');
-    });
+function addButtons(buttons) {
+    let positionIncrement = 0;
 
-    chapterElem.html(chapter);
-});
+    for (const button of buttons) {
+        const $button = $('<button>', {
+            text: button.text
+        });
 
-removeBtn.on('click', async () => {
-    const selectedText = window.getSelection().toString().trim();
-    const rmEntry = glossary[novelId].find(entry => entry.englishName.toLowerCase().trim() === selectedText.toLowerCase().trim());
-    const rmGlobalEntry = globalGlossary.find(globalEntry => globalEntry.englishName.toLowerCase().trim() === selectedText.toLowerCase().trim());
+        $button.css({
+            position: 'fixed',
+            top: `${10 + positionIncrement}px`,
+            right: '5px',
+            padding: '8px',
+            'font-size': '14px',
+            'background-color': '#E0E8F0',
+            color: 'white',
+            border: 'none',
+            'border-radius': '5px',
+            cursor: 'pointer',
+            'z-index': '9999',
+            'box-shadow': '0 2px 5px rgba(0, 0, 0, 0.2)'
+        });
 
-    if (rmEntry) {
-        glossary[novelId] = glossary[novelId].filter(entry => entry.chineseName !== rmEntry.chineseName);
+        $button.on('click', button.onClick);
+        $('body').append($button);
+        positionIncrement += 40;
     }
-
-    if (rmGlobalEntry) {
-        globalGlossary = globalGlossary.filter(entry => entry.chineseName !== rmGlobalEntry.chineseName);
-    }
-
-    await GM_setValue('glossary', glossary);
-    await GM_setValue('globalGlossary', globalGlossary);
-    let chapter = chapterElem.html();
-    chapter = chapter.replace(new RegExp(`<span[ a-z="-:;]+>${selectedText}</span>`, 'g'), selectedText);
-    chapterElem.html(chapter);
-});
-
-$('body').append(glossaryBtn);
-$('body').append(addBtn);
-$('body').append(removeBtn);
+}
 
 async function askGemini(instruction, content) {
     const systemInstruction = {
