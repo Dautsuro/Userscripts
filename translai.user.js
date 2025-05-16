@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         TranslAI
 // @namespace    https://github.com/Dautsuro
-// @version      1.2.0
+// @version      1.3.0
 // @description  -
 // @author       Dautsuro
 // @match        https://www.69shuba.com/txt/*/*
+// @match        https://www.69shuba.com/book/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=69shuba.com
 // @grant        GM.getValue
 // @grant        GM.setValue
@@ -23,7 +24,8 @@ class Novel {
     static get id() {
         const url = window.location.href;
         const urlSegments = url.split('/');
-        return urlSegments[4];
+        const id = urlSegments[4].match(/\d+/g);
+        return id ? id.join('') : '';
     }
 }
 
@@ -128,7 +130,7 @@ class Gemini {
             const data = await response.json();
             return data['candidates'][0]['content']['parts'][0]['text'];
         } catch (error) {
-            console.log(`Error while asking Gemini: ${error}`);
+            console.error(`Error while asking Gemini: ${error}`);
             throw error;
         }
     }
@@ -183,8 +185,6 @@ class Chapter {
                 instruction = `You are a professional Chinese-to-English translator. Translate the provided Chinese novel chapter into English. This is a ${setting} fanfiction. Ensure accurate translation of all names, including characters, techniques, places, and items, based on the original works. Output only the translated chapter, no extra text`;
             }
         }
-
-        console.log(instruction);
 
         let modifiedContent = this.content;
         const names = NameManager.names.sort((a, b) => b.original.length - a.original.length);
@@ -265,95 +265,100 @@ class Button {
 }
 
 (async () => {
-    await NameManager.setup();
+    const url = window.location.href;
 
-    const chapterElement = document.querySelector('.txtnav');
-    const chapter = new Chapter(chapterElement);
-    await chapter.translate();
-    
-    const editButton = new Button('📝');
-    const addButton = new Button('➕');
-    const removeButton = new Button('➖');
-    const copyButton = new Button('📋');
+    if (url.includes('txt')) {
+        await NameManager.setup();
+
+        const chapterElement = document.querySelector('.txtnav');
+        const chapter = new Chapter(chapterElement);
+        await chapter.translate();
+        
+        const editButton = new Button('📝');
+        const addButton = new Button('➕');
+        const removeButton = new Button('➖');
+        const copyButton = new Button('📋');
+
+        editButton.render();
+        addButton.render();
+        removeButton.render();
+        copyButton.render();
+
+        addButton.onClick = async () => {
+            const selection = window.getSelection();
+            let originalName = null;
+
+            if (selection.rangeCount) {
+                const range = selection.getRangeAt(0);
+                const fragment = range.cloneContents();
+                const span = fragment.querySelector('span[data-original]');
+                if (span) originalName = span.dataset.original;
+            }
+
+            if (!originalName) return;
+            await NameManager.addGlobal(originalName);
+            const newName = prompt('Enter new name');
+            if (!newName) return chapter.refreshDOM();
+            await NameManager.edit(originalName, newName);
+            const escapedName = Utils.escapeRegExp(selection.toString());
+            chapter.translatedContent = chapter.translatedContent.replace(new RegExp(escapedName, 'g'), newName);
+            chapter.refreshDOM();
+        };
+
+        editButton.onClick = async () => {
+            const selection = window.getSelection();
+            let originalName = null;
+
+            if (selection.rangeCount) {
+                const range = selection.getRangeAt(0);
+                const fragment = range.cloneContents();
+                const span = fragment.querySelector('span[data-original]');
+                if (span) originalName = span.dataset.original;
+            }
+
+            if (!originalName) return;
+            const newName = prompt('Enter new name');
+            if (!newName) return;
+            await NameManager.edit(originalName, newName);
+            const escapedName = Utils.escapeRegExp(selection.toString());
+            chapter.translatedContent = chapter.translatedContent.replace(new RegExp(escapedName, 'g'), newName);
+            chapter.refreshDOM();
+        }
+
+        removeButton.onClick = async () => {
+            const selection = window.getSelection();
+            let originalName = null;
+
+            if (selection.rangeCount) {
+                const range = selection.getRangeAt(0);
+                const fragment = range.cloneContents();
+                const span = fragment.querySelector('span[data-original]');
+                if (span) originalName = span.dataset.original;
+            }
+
+            if (!originalName) return;
+            await NameManager.remove(originalName);
+            chapter.refreshDOM();
+        }
+
+        copyButton.onClick = async () => {
+            const selection = window.getSelection();
+            let originalName = null;
+
+            if (selection.rangeCount) {
+                const range = selection.getRangeAt(0);
+                const fragment = range.cloneContents();
+                const span = fragment.querySelector('span[data-original]');
+                if (span) originalName = span.dataset.original;
+            }
+
+            if (!originalName) return;
+            await GM.setClipboard(originalName, 'text');
+        }
+    }
+
     const settingButton = new Button('⚙️');
-
-    editButton.render();
-    addButton.render();
-    removeButton.render();
-    copyButton.render();
     settingButton.render('left');
-
-    addButton.onClick = async () => {
-        const selection = window.getSelection();
-        let originalName = null;
-
-        if (selection.rangeCount) {
-            const range = selection.getRangeAt(0);
-            const fragment = range.cloneContents();
-            const span = fragment.querySelector('span[data-original]');
-            if (span) originalName = span.dataset.original;
-        }
-
-        if (!originalName) return;
-        await NameManager.addGlobal(originalName);
-        const newName = prompt('Enter new name');
-        if (!newName) return chapter.refreshDOM();
-        await NameManager.edit(originalName, newName);
-        const escapedName = Utils.escapeRegExp(selection.toString());
-        chapter.translatedContent = chapter.translatedContent.replace(new RegExp(escapedName, 'g'), newName);
-        chapter.refreshDOM();
-    };
-
-    editButton.onClick = async () => {
-        const selection = window.getSelection();
-        let originalName = null;
-
-        if (selection.rangeCount) {
-            const range = selection.getRangeAt(0);
-            const fragment = range.cloneContents();
-            const span = fragment.querySelector('span[data-original]');
-            if (span) originalName = span.dataset.original;
-        }
-
-        if (!originalName) return;
-        const newName = prompt('Enter new name');
-        if (!newName) return;
-        await NameManager.edit(originalName, newName);
-        const escapedName = Utils.escapeRegExp(selection.toString());
-        chapter.translatedContent = chapter.translatedContent.replace(new RegExp(escapedName, 'g'), newName);
-        chapter.refreshDOM();
-    }
-
-    removeButton.onClick = async () => {
-        const selection = window.getSelection();
-        let originalName = null;
-
-        if (selection.rangeCount) {
-            const range = selection.getRangeAt(0);
-            const fragment = range.cloneContents();
-            const span = fragment.querySelector('span[data-original]');
-            if (span) originalName = span.dataset.original;
-        }
-
-        if (!originalName) return;
-        await NameManager.remove(originalName);
-        chapter.refreshDOM();
-    }
-
-    copyButton.onClick = async () => {
-        const selection = window.getSelection();
-        let originalName = null;
-
-        if (selection.rangeCount) {
-            const range = selection.getRangeAt(0);
-            const fragment = range.cloneContents();
-            const span = fragment.querySelector('span[data-original]');
-            if (span) originalName = span.dataset.original;
-        }
-
-        if (!originalName) return;
-        await GM.setClipboard(originalName, 'text');
-    }
 
     settingButton.onClick = async () => {
         const setting = await GM.getValue(`setting:${Novel.id}`);
