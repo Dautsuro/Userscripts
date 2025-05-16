@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TranslAI
 // @namespace    https://github.com/Dautsuro
-// @version      1.1.0
+// @version      1.2.0
 // @description  -
 // @author       Dautsuro
 // @match        https://www.69shuba.com/txt/*/*
@@ -169,7 +169,23 @@ class Chapter {
     }
 
     async translate() {
-        const instruction = 'You are a professional Chinese-to-English translator. Translate the provided Chinese novel chapter into English. Output only the translated chapter, no extra text';
+        const setting = await GM.getValue(`setting:${Novel.id}`);
+        let instruction;
+
+        if (!setting) {
+            instruction = 'You are a professional Chinese-to-English translator. Translate the provided Chinese novel chapter into English. Output only the translated chapter, no extra text';
+        } else {
+            const settingArgs = setting.split(',');
+
+            if (settingArgs.length > 1) {
+                instruction = `You are a professional Chinese-to-English translator. Translate the provided Chinese novel chapter into English. This is a fanfiction combining ${settingArgs.join(' and ')}. Ensure accurate translation of all names, including characters, techniques, places, and items, based on the original works. Output only the translated chapter, no extra text`;
+            } else {
+                instruction = `You are a professional Chinese-to-English translator. Translate the provided Chinese novel chapter into English. This is a ${setting} fanfiction. Ensure accurate translation of all names, including characters, techniques, places, and items, based on the original works. Output only the translated chapter, no extra text`;
+            }
+        }
+
+        console.log(instruction);
+
         let modifiedContent = this.content;
         const names = NameManager.names.sort((a, b) => b.original.length - a.original.length);
 
@@ -218,7 +234,8 @@ class Chapter {
 }
 
 class Button {
-    static offset = 0;
+    static rightOffset = 0;
+    static leftOffset = 0;
 
     constructor(text) {
         this.text = text;
@@ -228,21 +245,21 @@ class Button {
         this.element.addEventListener('click', callback);
     }
 
-    render() {
+    render(position = 'right') {
         this.element = document.createElement('button');
         this.element.textContent = this.text;
 
         Object.assign(this.element.style, {
             position: 'fixed',
-            bottom: `${5 + Button.offset}px`,
-            right: '5px',
+            bottom: `${5 + Button[`${position}Offset`]}px`,
+            [position]: '5px',
             'z-index': '1000',
             padding: '8px',
             'font-size': '14px',
             'background-color': '#E0E8F0',
         });
 
-        Button.offset += 40;
+        Button[`${position}Offset`] += 40;
         document.body.appendChild(this.element);
     }
 }
@@ -258,11 +275,13 @@ class Button {
     const addButton = new Button('➕');
     const removeButton = new Button('➖');
     const copyButton = new Button('📋');
+    const settingButton = new Button('⚙️');
 
     editButton.render();
     addButton.render();
     removeButton.render();
     copyButton.render();
+    settingButton.render('left');
 
     addButton.onClick = async () => {
         const selection = window.getSelection();
@@ -334,5 +353,12 @@ class Button {
 
         if (!originalName) return;
         await GM.setClipboard(originalName, 'text');
+    }
+
+    settingButton.onClick = async () => {
+        const setting = await GM.getValue(`setting:${Novel.id}`);
+        const newSetting = prompt('Enter setting', setting);
+        if (!newSetting) return;
+        await GM.setValue(`setting:${Novel.id}`, newSetting);
     }
 })();
