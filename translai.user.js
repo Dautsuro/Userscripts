@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TranslAI
 // @namespace    https://github.com/Dautsuro
-// @version      1.0.0
+// @version      1.0.1
 // @description  -
 // @author       Dautsuro
 // @match        https://www.69shuba.com/txt/*/*
@@ -207,7 +207,7 @@ class Chapter {
         for (const name of names) {
             const escapedName = Utils.escapeRegExp(name.translated);
 
-            modifiedContent = modifiedContent.replace(new RegExp(escapedName, 'g'), match => {
+            modifiedContent = modifiedContent.replace(new RegExp(`(?!<span[^>]*?>)(${escapedName})(?![^<]*?</span>)`, 'g'), match => {
                 const color = NameManager.isGlobal(name) ? '#d4edda' : '#f8d7da';
                 return `<span style="background-color: ${color}; user-select: all;" data-original="${name.original}">${match}</span>`;
             });
