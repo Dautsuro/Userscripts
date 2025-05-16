@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TranslAI
 // @namespace    https://github.com/Dautsuro
-// @version      1.0.1
+// @version      1.1.0
 // @description  -
 // @author       Dautsuro
 // @match        https://www.69shuba.com/txt/*/*
@@ -277,6 +277,11 @@ class Button {
 
         if (!originalName) return;
         await NameManager.addGlobal(originalName);
+        const newName = prompt('Enter new name');
+        if (!newName) return chapter.refreshDOM();
+        await NameManager.edit(originalName, newName);
+        const escapedName = Utils.escapeRegExp(selection.toString());
+        chapter.translatedContent = chapter.translatedContent.replace(new RegExp(escapedName, 'g'), newName);
         chapter.refreshDOM();
     };
 
