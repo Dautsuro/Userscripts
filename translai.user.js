@@ -9,6 +9,8 @@
 // @grant        GM.getValue
 // @grant        GM.setValue
 // @grant        GM.setClipboard
+// @downloadURL  https://github.com/Dautsuro/Userscripts/raw/refs/heads/main/translai.user.js
+// @updateURL    https://github.com/Dautsuro/Userscripts/raw/refs/heads/main/translai.user.js
 // ==/UserScript==
 
 class Utils {
